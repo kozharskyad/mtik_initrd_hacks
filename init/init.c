@@ -125,6 +125,8 @@ static BOOL busybox_install(void) {
 }
 
 static BOOL populate_system_dir(const char *system_dir) {
+	char path_telnetd_svc_script[PATH_MAX];
+
 	snprintf(path_bin, PATH_MAX, "%s/bin", system_dir);
 	snprintf(path_etc, PATH_MAX, "%s/etc", system_dir);
 	snprintf(path_bb, PATH_MAX, "%s/busybox", path_bin);
@@ -139,6 +141,8 @@ static BOOL populate_system_dir(const char *system_dir) {
 
 	if (!do_chmod(path_bb, 755)) {
 		fprintf(stderr, "Can't set mode for '%s'\n", path_bb);
+
+		return FALSE;
 	}
 
 	CREATE_DIR_SB(path_etc);
@@ -148,6 +152,11 @@ static BOOL populate_system_dir(const char *system_dir) {
 	if (!busybox_install()) {
 		return FALSE;
 	}
+
+	snprintf(path_telnetd_svc_script, PATH_MAX, "%s/telnetd/run", path_svc);
+	do_chmod(path_telnetd_svc_script, 755);
+	snprintf(path_telnetd_svc_script, PATH_MAX, "%s/telnetd/check", path_svc);
+	do_chmod(path_telnetd_svc_script, 755);
 
 	return TRUE;
 }

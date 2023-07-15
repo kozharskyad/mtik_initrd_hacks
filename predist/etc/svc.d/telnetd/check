@@ -1,0 +1,16 @@
+#!/ram/disks/usb1-part1/system/bin/sh
+
+. $CFGDIR/telnetd
+
+echo -n 'Checking availability of telnetd: '
+true | nc 127.0.0.1 $TELNETD_PORT | hexdump | grep -q 'fffd 01ff fd1f fffb 01ff fb03' >/dev/null 2>&1
+
+RET=$?
+
+if [[ $RET -eq 0 ]]; then
+  echo 'OK'
+else
+  echo 'FAIL'
+fi
+
+exit $RET

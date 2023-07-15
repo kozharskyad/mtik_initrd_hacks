@@ -1,0 +1,12 @@
+#!/ram/disks/usb1-part1/system/bin/sh
+
+. $CFGDIR/telnetd
+
+if [[ -n "$TELNETD_CHROOT" ]]; then
+  while [[ ! -d "$TELNETD_CHROOT" ]]; do
+    echo "Waiting for '$TELNETD_CHROOT' dir ready"
+    sleep 5
+  done
+fi
+
+chroot "$TELNETD_CHROOT" telnetd -p $TELNETD_PORT -F -l $TELNETD_SHELL
