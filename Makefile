@@ -31,7 +31,13 @@ CPFLAGS=
 RM=rm
 RMFLAGS=-rf
 
-all: unpack init
+all: unpack init pack dist
+	@echo '*****************************************************'
+	@echo 'Copy contents of "dist" directory'
+	@echo 'at root "system" directory on your flash drive.'
+	@echo 'Put "kernel/kernel-new.elf on your TFTP boot service'
+	@echo 'and setup MikroTik device to boot it from.'
+	@echo '*****************************************************'
 
 dist: $(BB)
 	$(RM) $(RMFLAGS) $@
