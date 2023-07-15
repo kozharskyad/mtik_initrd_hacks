@@ -62,4 +62,7 @@ clean:
 	$(MAKE) -C $(KEDIR) clean
 	$(MAKE) -C $(INITDIR) clean
 
-.PHONY: all unpack init pack clean
+distclean: clean
+	$(RM) $(RMFLAGS) $(NPKDIR)
+
+.PHONY: all unpack init pack clean distclean

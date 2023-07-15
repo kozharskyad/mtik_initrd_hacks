@@ -1,0 +1,12 @@
+*
+!.gitignore
+!Makefile
+!init
+!init/Makefile
+!init/init.c
+!init/init.h
+!kernel-extractor
+!kernel-extractor/Makefile
+!kernel-extractor/kernel-extractor.c
+!pack-kernel.sh
+!unpack-kernel.sh
