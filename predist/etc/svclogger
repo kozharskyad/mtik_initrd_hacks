@@ -1,0 +1,6 @@
+LOGGER_SVC_SCRIPT="$(readlink -nf """$0""")"
+LOGGER_SVC_DIR="$(dirname """$LOGGER_SVC_SCRIPT""")"
+LOGGER_SVC_NAME="svc.$(basename """$LOGGER_SVC_DIR""")"
+
+exec 1> >(logger -t "[$LOGGER_SVC_NAME.stdout]")
+exec 2> >(logger -t "[$LOGGER_SVC_NAME.stderr]" -p user.error)

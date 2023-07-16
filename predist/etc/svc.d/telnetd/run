@@ -34,4 +34,4 @@ if [[ -n "$TELNETD_LOGINSH" ]]; then
   fi
 fi
 
-$CHROOT telnetd -p $TELNETD_PORT -F $LOGINSH
+exec $CHROOT telnetd -p $TELNETD_PORT -F $LOGINSH
