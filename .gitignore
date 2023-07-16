@@ -13,6 +13,8 @@
 !predist/etc/
 !predist/etc/cfg/
 !predist/etc/cfg/telnetd
+!predist/etc/group
+!predist/etc/passwd
 !predist/etc/svc.d/
 !predist/etc/svc.d/telnetd/
 !predist/etc/svc.d/telnetd/run

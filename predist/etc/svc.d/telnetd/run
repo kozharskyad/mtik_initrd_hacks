@@ -2,11 +2,36 @@
 
 . $CFGDIR/telnetd
 
+CHROOT=""
+LOGINSH=""
+
 if [[ -n "$TELNETD_CHROOT" ]]; then
   while [[ ! -d "$TELNETD_CHROOT" ]]; do
     echo "Waiting for '$TELNETD_CHROOT' dir ready"
     sleep 5
   done
+
+  CHROOT="chroot """$TELNETD_CHROOT""""
+elif [[ -n "$HOME" ]]; then
+  cd "$HOME"
+else
+  cd "/"
 fi
 
-chroot "$TELNETD_CHROOT" telnetd -p $TELNETD_PORT -F -l $TELNETD_SHELL
+if [[ -n "$TELNETD_LOGINSH" ]]; then
+  LOGINSH="-l"
+
+  if echo -n "$TELNETD_LOGINSH" | egrep -q '\s'; then
+    TMPFILE="$(mktemp)"
+
+    echo '#!/ram/disks/usb1-part1/system/bin/sh' > "$TMPFILE"
+    echo "exec $TELNETD_LOGINSH" >> "$TMPFILE"
+
+    chmod +x "$TMPFILE"
+    LOGINSH="$LOGINSH """$TMPFILE""""
+  else
+    LOGINSH="$LOGINSH """$TELNETD_LOGINSH""""
+  fi
+fi
+
+$CHROOT telnetd -p $TELNETD_PORT -F $LOGINSH

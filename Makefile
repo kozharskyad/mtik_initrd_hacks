@@ -35,16 +35,17 @@ all: unpack init pack dist
 	@echo ''
 	@echo '*****************************************************'
 	@echo 'Copy contents of "dist" directory'
-	@echo 'at root "system" directory on your flash pen drive.'
+	@echo 'at root of your flash pen drive.'
 	@echo 'Put "kernel/kernel-new.elf on your TFTP boot service'
 	@echo 'and setup MikroTik device to boot it from.'
 	@echo '*****************************************************'
 
 dist: $(BB)
 	$(RM) $(RMFLAGS) $@
-	$(CP) $(CPFLAGS) -R pre$@ $@
-	$(MD) $(MDFLAGS) $@/bin
-	$(CP) $(CPFLAGS) $< $@/bin/
+	$(MD) $(MDFLAGS) $@
+	$(CP) $(CPFLAGS) -R pre$@ $@/system
+	$(MD) $(MDFLAGS) $@/system/bin
+	$(CP) $(CPFLAGS) $< $@/system/bin/
 
 unpack: $(KERNELELF)
 
@@ -69,6 +70,7 @@ $(BB): $(BBMKF)
 	$(SED) $(SEDFLAGS) 's/^(#\s+?)?(CONFIG_PIE)(=|\s|$$).+?$$/\2=n/g' $(BBDIR)/.config
 	$(SED) $(SEDFLAGS) 's/^(#\s+?)?(CONFIG_EXTRA_CFLAGS)(=|\s|$$).+?$$/\2="-march=mips32r2"/g' $(BBDIR)/.config
 	$(SED) $(SEDFLAGS) 's/^(#\s+?)?(CONFIG_EXTRA_LDFLAGS)(=|\s|$$).+?$$/\2="-march=mips32r2 -no-pie"/g' $(BBDIR)/.config
+	$(SED) $(SEDFLAGS) 's|^(#define\s+?_PATH_[^\s]+?\s+?")(/etc/.+?")$$|\1/ram/disks/usb1-part1/system\2|g' $(BBDIR)/include/libbb.h
 	$(MAKE) -j $$(nproc) -C $(BBDIR) SUBARCH=mips32r2 busybox
 	$(WC) $(WCFLAGS) $@
 
@@ -86,7 +88,7 @@ $(KERNELELF): $(KERNELBIN) $(UNPACK_KERNEL_SH)
 	$(UNPACK_KERNEL_SH) $<
 	$(WC) $(WCFLAGS) $@
 
-$(KERNELNEWELF): $(INIT) init $(PACK_KERNEL_SH) $(KERNELELF)
+$(KERNELNEWELF): $(INIT) $(PACK_KERNEL_SH) $(KERNELELF)
 	$(PACK_KERNEL_SH)
 	$(WC) $(WCFLAGS) $@
 
