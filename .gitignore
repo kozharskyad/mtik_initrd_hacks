@@ -1,6 +1,7 @@
 *
 !.gitignore
 !Makefile
+!README.md
 !init/
 !init/Makefile
 !init/init.c
