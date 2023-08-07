@@ -1,4 +1,4 @@
-#!/ram/disks/usb1-part1/system/bin/sh
+#!/ram/disks/usb1-part1/{SYSDIR_SUFFIX}/bin/sh
 
 . $CFGDIR/telnetd
 

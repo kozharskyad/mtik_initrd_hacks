@@ -1,35 +1,45 @@
 #include <stdlib.h>
 #include <fenv.h>
 #include <unistd.h>
+#include <string.h>
 #include <sys/wait.h>
 #include <fcntl.h>
 #include "init.h"
 
+static const char *PSB_SYSTEM_DIRS[] = {
+  "/system/ram/disks/usb1/" SYSDIR_SUFFIX,
+  "/system/ram/disks/usb1-part1/" SYSDIR_SUFFIX,
+  "/system/ram/disks/usb1-part2/" SYSDIR_SUFFIX,
+  "/system/ram/disks/usb1-part3/" SYSDIR_SUFFIX,
+  "/system/ram/disks/usb1-part4/" SYSDIR_SUFFIX,
+  "/system/ram/disks/disk1/" SYSDIR_SUFFIX,
+  "/system/ram/disks/disk2/" SYSDIR_SUFFIX,
+  "/flash/rw/disk/pub/" SYSDIR_SUFFIX,
+  "/flash/rw/disk/flash/rw/disk/pub/" SYSDIR_SUFFIX
+};
+static const char SYSROOT_PATH[] = "/system";
+static const char SRD_DIR_PATH[] = "/system/ram/disks";
+static const char RD_DIR_PATH[] = "/ram/disks";
+static const size_t SYSROOT_PATH_LEN = sizeof(SYSROOT_PATH) - 1;
+static const size_t PSB_SYSTEM_DIRS_COUNT = sizeof(PSB_SYSTEM_DIRS) / sizeof(*PSB_SYSTEM_DIRS);
+static const char *PATH_ENV_NAME = "PATH";
+
 static char path_bin[PATH_MAX];
+static char path_etc[PATH_MAX];
+static char path_tmp[PATH_MAX];
+static char path_dev[PATH_MAX];
+static char path_pts[PATH_MAX];
+static char path_proc[PATH_MAX];
+static char path_sys[PATH_MAX];
 static char path_bb[PATH_MAX];
 static char path_sh[PATH_MAX];
 static char path_bb_upg[PATH_MAX];
-static char path_etc[PATH_MAX];
+static char path_mikrotik[PATH_MAX];
 static char path_svc[PATH_MAX];
 static char path_cfg[PATH_MAX];
-static char sysroot_path[] = "/system";
-static char srd_dir_path[] = "/system/ram/disks";
-static char rd_dir_path[] = "/ram/disks";
-static char *psb_system_dirs[] = {
-  "/system/ram/disks/usb1/system",
-  "/system/ram/disks/usb1-part1/system",
-  "/system/ram/disks/usb1-part2/system",
-  "/system/ram/disks/usb1-part3/system",
-  "/system/ram/disks/usb1-part4/system",
-  "/system/ram/disks/disk1/system",
-  "/system/ram/disks/disk2/system",
-  "/flash/rw/disk/pub/system",
-  "/flash/rw/disk/flash/rw/disk/pub/system"
-};
-static const size_t SYSROOT_PATH_LEN = sizeof(sysroot_path) - 1;
-static const size_t PSB_SYSTEM_DIRS_COUNT = sizeof(psb_system_dirs) / sizeof(*psb_system_dirs);
-static const char *PATH_ENV_NAME = "PATH";
+static size_t system_dir_len = 0;
 
+#define PATH_WORKTRUNC(PATH) ((char *)PATH + system_dir_len)
 #define PATH_SYSTRUNC(PATH) ((char *)PATH + SYSROOT_PATH_LEN)
 
 static BOOL do_chmod(const char *path, int mode) {
@@ -71,7 +81,7 @@ static BOOL wait_srd(void) {
   unsigned char try;
 
   for (try = 0u; try < WAIT_TRY_THRESHOLD; try++) {
-    if (path_exists(srd_dir_path)) {
+    if (path_exists(SRD_DIR_PATH)) {
       return TRUE;
     }
 
@@ -91,10 +101,10 @@ static char *detect_system_dir(void) {
     char *current_work_dir = NULL;
 
     for (wd_index = 0ul; wd_index < PSB_SYSTEM_DIRS_COUNT; wd_index++) {
-      char *work_dir = psb_system_dirs[wd_index];
+      const char *work_dir = PSB_SYSTEM_DIRS[wd_index];
 
       if (path_exists(work_dir)) {
-        current_work_dir = work_dir;
+        current_work_dir = (char *)work_dir; /* TODO: Remove dirty const */
 
         break;
       }
@@ -102,6 +112,8 @@ static char *detect_system_dir(void) {
 
     if (last_work_dir != NULL && current_work_dir == last_work_dir) {
       if (match_count == DETECT_WD_NEED_MATCH) {
+        system_dir_len = strnlen(current_work_dir, PATH_MAX);
+
         return current_work_dir;
       } else {
         match_count += 1u;
@@ -115,6 +127,38 @@ static char *detect_system_dir(void) {
   }
 
   return NULL;
+}
+
+static void mount_bind(const char *src, const char *dst) {
+  const char *bb_argv[] = {path_bb, "mount", "-o", "bind", src, dst, NULL};
+  pid_t pid = fork();
+
+  if (pid == 0) {
+    if (execvp(path_bb, (char *const *)bb_argv) != 0) {
+      fprintf(stderr, "Error mounting '%s' to '%s': %s\n",
+        src, dst, strerror(errno));
+    }
+
+    exit(0);
+  } else {
+    waitpid(pid, NULL, 0);
+  }
+}
+
+static void mount_fs(const char *type, const char *src, const char *dst) {
+  const char *bb_argv[] = {path_bb, "mount", "-t", type, src, dst, NULL};
+  pid_t pid = fork();
+
+  if (pid == 0) {
+    if (execvp(path_bb, (char * const*)bb_argv) != 0) {
+      fprintf(stderr, "Error mounting '%s' to '%s': %s\n",
+        src, dst, strerror(errno));
+    }
+
+    exit(0);
+  } else {
+    waitpid(pid, NULL, 0);
+  }
 }
 
 static void busybox_uninstall(void) {
@@ -150,16 +194,22 @@ static void busybox_install(void) {
 }
 
 static BOOL populate_system_dir(const char *system_dir) {
-  char path_telnetd_svc_script[PATH_MAX];
+  char path_buf[PATH_MAX];
   BOOL is_upgrading = FALSE;
 
   snprintf(path_bin, PATH_MAX, "%s/bin", system_dir);
   snprintf(path_etc, PATH_MAX, "%s/etc", system_dir);
-  snprintf(path_bb, PATH_MAX, "%s/busybox", path_bin);
-  snprintf(path_sh, PATH_MAX, "%s/sh", path_bin);
-  snprintf(path_bb_upg, PATH_MAX, "%s/busybox.upgrade", path_bin);
-  snprintf(path_svc, PATH_MAX, "%s/svc.d", path_etc);
-  snprintf(path_cfg, PATH_MAX, "%s/cfg", path_etc);
+  snprintf(path_tmp, PATH_MAX, "%s/tmp", system_dir);
+  snprintf(path_dev, PATH_MAX, "%s/dev", system_dir);
+  snprintf(path_pts, PATH_MAX, "%s/dev/pts", system_dir);
+  snprintf(path_proc, PATH_MAX, "%s/proc", system_dir);
+  snprintf(path_sys, PATH_MAX, "%s/sys", system_dir);
+  snprintf(path_mikrotik, PATH_MAX, "%s/mikrotik", system_dir);
+  snprintf(path_bb, PATH_MAX, "%s/bin/busybox", system_dir);
+  snprintf(path_sh, PATH_MAX, "%s/bin/sh", system_dir);
+  snprintf(path_bb_upg, PATH_MAX, "%s/bin/busybox.upgrade", system_dir);
+  snprintf(path_svc, PATH_MAX, "%s/etc/svc.d", system_dir);
+  snprintf(path_cfg, PATH_MAX, "%s/etc/cfg", system_dir);
 
   if (path_exists(path_bb_upg)) {
     if (rename(path_bb_upg, path_bb) == 0) {
@@ -183,6 +233,11 @@ static BOOL populate_system_dir(const char *system_dir) {
   }
 
   CREATE_DIR_SB(path_etc);
+  CREATE_DIR_SB(path_tmp);
+  CREATE_DIR_SB(path_dev);
+  CREATE_DIR_SB(path_proc);
+  CREATE_DIR_SB(path_sys);
+  /* CREATE_DIR_SB(path_mikrotik); */
   CREATE_DIR_SB(path_svc);
   CREATE_DIR_SB(path_cfg);
 
@@ -190,16 +245,30 @@ static BOOL populate_system_dir(const char *system_dir) {
     busybox_uninstall();
   }
 
+  do_chmod(path_tmp, 0777);
   busybox_install();
-  snprintf(path_telnetd_svc_script, PATH_MAX, "%s/telnetd/run", path_svc);
-  do_chmod(path_telnetd_svc_script, 0755);
-  snprintf(path_telnetd_svc_script, PATH_MAX, "%s/telnetd/check", path_svc);
-  do_chmod(path_telnetd_svc_script, 0755);
+  snprintf(path_buf, PATH_MAX, "%s/etc/svc.d/telnetd/run", system_dir);
+  do_chmod(path_buf, 0755);
+  snprintf(path_buf, PATH_MAX, "%s/etc/svc.d/telnetd/check", system_dir);
+  do_chmod(path_buf, 0755);
+  snprintf(path_buf, PATH_MAX, "%s/etc/passwd", system_dir);
+  do_chmod(path_buf, 0644);
+  snprintf(path_buf, PATH_MAX, "%s/etc/shadow", system_dir);
+  do_chmod(path_buf, 0640);
+
+  /*
+  mount_bind(SYSROOT_PATH, path_mikrotik);
+  mount_fs("devtmpfs", "sysdev", path_dev);
+  CREATE_DIR_SB(path_pts);
+  mount_fs("devpts", "syspts", path_pts);
+  mount_fs("proc", "sysproc", path_proc);
+  mount_fs("sysfs", "syssys", path_sys);
+  */
 
   return TRUE;
 }
 
-static BOOL runsvdir_fork(const char *system_dir) {
+static BOOL runsvdir_fork(char *system_dir) {
   char new_path_env[ENV_MAX];
   pid_t pid;
   char *busybox_argv[] = {path_bb, "chroot", sysroot_path, PATH_SYSTRUNC(path_bb), "runsvdir", PATH_SYSTRUNC(path_svc), NULL};
@@ -209,7 +278,8 @@ static BOOL runsvdir_fork(const char *system_dir) {
     path_env = "/bin";
   }
 
-  snprintf(new_path_env, ENV_MAX, "%s:%s", PATH_SYSTRUNC(path_bin), path_env);
+  snprintf(new_path_env, ENV_MAX, "%s:%s:%s",
+    PATH_WORKTRUNC(path_bin), PATH_SYSTRUNC(path_bin), path_env);
 
   if (
     setenv(PATH_ENV_NAME, new_path_env, 1) != 0 ||
@@ -247,9 +317,9 @@ static BOOL init(void) {
     return FALSE;
   }
 
-  printf("Creating symlink '%s' -> '%s'...", srd_dir_path, rd_dir_path);
+  printf("Creating symlink '%s' -> '%s'...", SRD_DIR_PATH, RD_DIR_PATH);
 
-  if (symlink(srd_dir_path, rd_dir_path) == 0 || errno == EEXIST) {
+  if (symlink(SRD_DIR_PATH, RD_DIR_PATH) == 0 || errno == EEXIST) {
     printf("OK\n");
   } else {
     printf("FAIL\n");

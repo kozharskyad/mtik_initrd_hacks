@@ -1,5 +1,6 @@
-NPKVER:=$(NPKVER)
-BBVER:=$(BBVER)
+NPKVER:=7.9
+BBVER:=1.36.1
+SYSDIR_SUFFIX:=system-v2
 NPKURL=https://download.mikrotik.com/routeros/$(NPKVER)/routeros-$(NPKVER)-mipsbe.npk
 NPKDIR=npk
 NPK=$(NPKDIR)/routeros-$(NPKVER)-mipsbe.npk
@@ -43,9 +44,12 @@ all: unpack init pack dist
 dist: $(BB)
 	$(RM) $(RMFLAGS) $@
 	$(MD) $(MDFLAGS) $@
-	$(CP) $(CPFLAGS) -R pre$@ $@/system
-	$(MD) $(MDFLAGS) $@/system/bin
-	$(CP) $(CPFLAGS) $< $@/system/bin/
+	$(CP) $(CPFLAGS) -R pre$@ $@/$(SYSDIR_SUFFIX)
+	sed -ri 's/\{SYSDIR_SUFFIX\}/$(SYSDIR_SUFFIX)/g' $@/$(SYSDIR_SUFFIX)/etc/passwd
+	sed -ri 's/\{SYSDIR_SUFFIX\}/$(SYSDIR_SUFFIX)/g' $@/$(SYSDIR_SUFFIX)/etc/svc.d/telnetd/check
+	sed -ri 's/\{SYSDIR_SUFFIX\}/$(SYSDIR_SUFFIX)/g' $@/$(SYSDIR_SUFFIX)/etc/svc.d/telnetd/run
+	$(MD) $(MDFLAGS) $@/$(SYSDIR_SUFFIX)/bin
+	$(CP) $(CPFLAGS) $< $@/$(SYSDIR_SUFFIX)/bin/
 
 unpack: $(KERNELELF)
 
@@ -78,7 +82,7 @@ $(KE):
 	$(MAKE) -C $(KEDIR)
 
 $(INIT):
-	$(MAKE) -C $(INITDIR)
+	$(MAKE) -C $(INITDIR) SYSDIR_SUFFIX=$(SYSDIR_SUFFIX)
 
 $(KERNELBIN): $(NPK) $(KE)
 	$(MD) $(MDFLAGS) $(KERNELDIR)

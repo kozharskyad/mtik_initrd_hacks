@@ -1,4 +1,4 @@
-#!/ram/disks/usb1-part1/system/bin/sh
+#!/ram/disks/usb1-part1/{SYSDIR_SUFFIX}/bin/sh
 
 . $CFGDIR/telnetd
 
@@ -24,7 +24,7 @@ if [[ -n "$TELNETD_LOGINSH" ]]; then
   if echo -n "$TELNETD_LOGINSH" | egrep -q '\s'; then
     TMPFILE="$(mktemp)"
 
-    echo '#!/ram/disks/usb1-part1/system/bin/sh' > "$TMPFILE"
+    echo '#!/ram/disks/usb1-part1/{SYSDIR_SUFFIX}/bin/sh' > "$TMPFILE"
     echo "exec $TELNETD_LOGINSH" >> "$TMPFILE"
 
     chmod +x "$TMPFILE"

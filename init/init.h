@@ -18,7 +18,7 @@ typedef unsigned char BOOL;
 #ifdef PATH_MAX
 #undef PATH_MAX
 #endif
-#define PATH_MAX 64
+#define PATH_MAX (256)
 
 #ifdef ENV_MAX
 #undef ENV_MAX
@@ -39,6 +39,11 @@ typedef unsigned char BOOL;
 #undef DETECT_WD_NEED_MATCH
 #endif
 #define DETECT_WD_NEED_MATCH 3u
+
+#ifdef SYSDIR_SUFFIX
+#undef SYSDIR_SUFFIX
+#endif
+#define SYSDIR_SUFFIX "system-v3"
 
 #ifdef CREATE_DIR_SB
 #undef CREATE_DIR_SB

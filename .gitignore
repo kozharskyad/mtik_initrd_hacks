@@ -16,6 +16,7 @@
 !predist/etc/cfg/telnetd
 !predist/etc/group
 !predist/etc/passwd
+!predist/etc/shadow
 !predist/etc/svclogger
 !predist/etc/svc.d/
 !predist/etc/svc.d/telnetd/
