@@ -271,7 +271,7 @@ static BOOL populate_system_dir(const char *system_dir) {
 static BOOL runsvdir_fork(char *system_dir) {
   char new_path_env[ENV_MAX];
   pid_t pid;
-  char *busybox_argv[] = {path_bb, "chroot", sysroot_path, PATH_SYSTRUNC(path_bb), "runsvdir", PATH_SYSTRUNC(path_svc), NULL};
+  char *busybox_argv[] = {path_bb, "chroot", (char *)SYSROOT_PATH, PATH_SYSTRUNC(path_bb), "runsvdir", PATH_SYSTRUNC(path_svc), NULL};
   const char *path_env = getenv(PATH_ENV_NAME);
 
   if (path_env == NULL) {
@@ -349,8 +349,11 @@ static BOOL init(void) {
   return runsvdir_fork(system_dir);
 }
 
-int main(int argc, char *argv[]){
+int main(int argc, char *argv[]) {
   pid_t pid;
+
+  (void)mount_fs;
+  (void)mount_bind;
 
   argv[0] = "/oldinit";
   pid = fork();

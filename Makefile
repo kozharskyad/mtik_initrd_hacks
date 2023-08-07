@@ -1,6 +1,6 @@
 NPKVER:=7.9
 BBVER:=1.36.1
-SYSDIR_SUFFIX:=system-v2
+SYSDIR_SUFFIX:=system-v3
 NPKURL=https://download.mikrotik.com/routeros/$(NPKVER)/routeros-$(NPKVER)-mipsbe.npk
 NPKDIR=npk
 NPK=$(NPKDIR)/routeros-$(NPKVER)-mipsbe.npk
@@ -74,7 +74,7 @@ $(BB): $(BBMKF)
 	$(SED) $(SEDFLAGS) 's/^(#\s+?)?(CONFIG_PIE)(=|\s|$$).+?$$/\2=n/g' $(BBDIR)/.config
 	$(SED) $(SEDFLAGS) 's/^(#\s+?)?(CONFIG_EXTRA_CFLAGS)(=|\s|$$).+?$$/\2="-march=mips32r2"/g' $(BBDIR)/.config
 	$(SED) $(SEDFLAGS) 's/^(#\s+?)?(CONFIG_EXTRA_LDFLAGS)(=|\s|$$).+?$$/\2="-march=mips32r2 -no-pie"/g' $(BBDIR)/.config
-	$(SED) $(SEDFLAGS) 's|^(#define\s+?_PATH_[^\s]+?\s+?")(/etc/.+?")$$|\1/ram/disks/usb1-part1/system\2|g' $(BBDIR)/include/libbb.h
+	$(SED) $(SEDFLAGS) 's|^(#define\s+?_PATH_[^\s]+?\s+?")(/etc/.+?")$$|\1/ram/disks/usb1-part1/$(SYSDIR_SUFFIX)\2|g' $(BBDIR)/include/libbb.h
 	$(MAKE) -j $$(nproc) -C $(BBDIR) SUBARCH=mips32r2 busybox
 	$(WC) $(WCFLAGS) $@
 
