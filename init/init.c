@@ -278,8 +278,8 @@ static BOOL runsvdir_fork(char *system_dir) {
     path_env = "/bin";
   }
 
-  snprintf(new_path_env, ENV_MAX, "%s:%s:%s",
-    PATH_WORKTRUNC(path_bin), PATH_SYSTRUNC(path_bin), path_env);
+  snprintf(new_path_env, ENV_MAX, "%s:%s",
+    PATH_SYSTRUNC(path_bin), path_env);
 
   if (
     setenv(PATH_ENV_NAME, new_path_env, 1) != 0 ||

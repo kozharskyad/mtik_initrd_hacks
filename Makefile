@@ -75,6 +75,7 @@ $(BB): $(BBMKF)
 	$(SED) $(SEDFLAGS) 's/^(#\s+?)?(CONFIG_EXTRA_CFLAGS)(=|\s|$$).+?$$/\2="-march=mips32r2"/g' $(BBDIR)/.config
 	$(SED) $(SEDFLAGS) 's/^(#\s+?)?(CONFIG_EXTRA_LDFLAGS)(=|\s|$$).+?$$/\2="-march=mips32r2 -no-pie"/g' $(BBDIR)/.config
 	$(SED) $(SEDFLAGS) 's|^(#define\s+?_PATH_[^\s]+?\s+?")(/etc/.+?")$$|\1/ram/disks/usb1-part1/$(SYSDIR_SUFFIX)\2|g' $(BBDIR)/include/libbb.h
+	$(SED) $(SEDFLAGS) 's|^(#if)n(def )(_PATH_G?SHADOW)$$|\1\2\3\n#un\2\3\n#endif\n#if 1|g' $(BBDIR)/include/libbb.h
 	$(MAKE) -j $$(nproc) -C $(BBDIR) SUBARCH=mips32r2 busybox
 	$(WC) $(WCFLAGS) $@
 
